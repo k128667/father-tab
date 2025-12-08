@@ -1,0 +1,28 @@
+body,
+p,
+ul {
+  margin: 0;
+}
+
+p,
+time {
+  line-height: 1;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+button {
+  padding: 0;
+  cursor: pointer;
+  border: none;
+  background-color: white;
+}
+
+dialog {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
