@@ -11,13 +11,12 @@
 
       <div ref="searchBoxRef" class="search-box">
         <button ref="searchEngineRef" class="select-engine">
-          <img class="engine-icon" :src="searchEngines[currentEngine].icon" alt="engine-icon">
-          <img class="down-icon" :src="downSvg" alt="down-icon">
+          <img class="engine-icon" :src="searchEngines[currentEngine].icon" alt="engineIcon">
+          <img class="down-icon" :src="downSvg" alt="downIcon">
         </button>
 
         <form @submit.prevent="handleSearch">
-          <input type="search" name="search" placeholder="请输入搜索内容" v-model="keyword" @input="fetchSuggest">
-
+          <input type="search" name="search" placeholder="请输入搜索内容" v-model="keyword" @input="getSuggestion">
           <button type="submit" class="search-button">
             <img class="search-icon" :src="searchIcon" alt="searchIcon">
           </button>
@@ -66,7 +65,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { getBaiduSuggestion, getBingWallpaper } from '@/api';
+import { getBingWallpaper, getBingSuggestion, getBaiduSuggestion } from '@/api';
 import searchIcon from '@/assets/search.svg';
 import downSvg from '@/assets/down.svg';
 import settingIcon from '@/assets/setting.svg';
@@ -125,6 +124,7 @@ const bingWallpaperPage = ref(0);
 
 const currentEngine = ref<keyof typeof searchEngines>('bing');
 const currentWeekStyle = ref<keyof typeof weekStyle>('weekFull');
+const currentSuggestion = ref<'bing' | 'baidu'>('bing');
 
 const suggestions = ref<string[]>([]);
 
@@ -175,45 +175,32 @@ const addEngine = () => {
 
 };
 
-
-const fetchSuggest = (wd: InputEvent) => {
-  console.log((wd.target as HTMLInputElement).value);
-
-  const w = (wd.target as HTMLInputElement).value.trim();
-  if (!w) {
-    suggestions.value = [];
+const getSuggestion = () => {
+  if (!keyword.value) {
     isOpenSuggestions.value = false;
+    suggestions.value = [];
     return;
-  }
-
-  const cbName = `baidu_cb_${Date.now()}`;
-
-  (window as any)[cbName] = (res: any) => {
-    // res.s = [];
-    // res.AS.Results.forEach((item: any) => {
-    //   item.Suggests.forEach((suggest: any) => {
-    //     res.s.push(suggest.Txt);
-    //   });
-    // });
-
-
-    suggestions.value = res.s.slice(0, 6) || [];
-    console.log(suggestions.value);
-    isOpenSuggestions.value = true;
-
-    delete (window as any)[cbName];
-    script.remove();
   };
-
-  const script = document.createElement('script');
-  script.src = `https://suggestion.baidu.com/su?wd=${encodeURIComponent(w)}&cb=${cbName}`;
-  //https://api.bing.com/qsonhs.aspx?q=
-  //https://suggest.bing.com/qsonhs.aspx?type=cb&q=
-  //https://sg1.api.bing.com/qsonhs.aspx?type=cb&cb=callback&q=
-  // script.src = `https://sg1.api.bing.com/qsonhs.aspx?type=cb&cb=${cbName}&q=${encodeURIComponent(w)}`;
-  // script.src = `https://api.bing.com/qsonhs.aspx?q=${encodeURIComponent(w)}`;
-  document.body.appendChild(script);
-};
+  switch (currentSuggestion.value) {
+    case 'bing':
+      getBingSuggestion(keyword.value).then((res: any) => {
+        const bingSuggestions: string[] = [];
+        res.AS.Results?.forEach((item: any) => {
+          item.Suggests.forEach((suggest: any) => {
+            bingSuggestions.push(suggest.Txt as string);
+          });
+        });
+        suggestions.value = bingSuggestions;
+      });
+      break;
+    case 'baidu':
+      getBaiduSuggestion(keyword.value).then((res: any) => {
+        suggestions.value = res[1];
+      });
+      break;
+  }
+  isOpenSuggestions.value = true;
+}
 
 const handleSuggestionClick = (index: number) => {
   // searchInput.value?.value = suggestions.value[index];
@@ -225,7 +212,6 @@ const getSearchEnginesIcon = (url: string) => {
   const domain = new URL(url).hostname;
   return `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
 };
-
 
 const startClock = () => {
   updateTime(); // 先立即刷新一次
@@ -244,6 +230,7 @@ const startClock = () => {
 
 onMounted(() => {
   getBingWallpaper(bingWallpaperPage.value)
+  getBingSuggestion('你好').then((res) => console.log(res));
   getBaiduSuggestion('你好').then((res) => console.log(res));
   // bingWallpaperRef.value?.showModal();
   bingUrlSuffix.value = '/th?id=OHR.EvergladesSunrise_ZH-CN2298606730_1920x1080.jpg&rf=LaDigue_1920x1080.jpg&pid=hp';

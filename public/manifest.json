@@ -3,10 +3,15 @@
     "description": "新标签页",
     "version": "1.0",
     "manifest_version": 3,
+    "background": {
+        "service_worker": "background.js"
+    },
     "chrome_url_overrides": {
         "newtab": "index.html"
     },
     "host_permissions": [
-        "https://www.bing.com/*"
+        "https://www.bing.com/*",
+        "https://api.bing.com/*",
+        "https://suggestion.baidu.com/*"
     ]
 }
